@@ -1,15 +1,25 @@
 <script setup>
+import { generateUUid } from '../utils/util'
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/default.css';
-const md = new MarkdownIt();
+import { onMounted, onUpdated, ref } from 'vue';
+import { ElMessage } from 'element-plus'
+const md = new MarkdownIt({
+  highlight: function (str, lang) {
+    const template = '<pre class="hhhh" style="background: black;color: #fff;border-radius: 10px;padding: 15px 15px;margin: 10px 0"><code>{text}</code></pre>'
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return template.replace("{text}", hljs.highlight(lang, str, true).value)
+      } catch (__) { }
+    }
+    return template.replace("{text}", md.utils.escapeHtml(str))
+  },
+});
 const isFirst = ref(true)
 const msglist = ref(null)
-import { computed, onMounted, onUpdated, ref } from 'vue';
-import { ElMessage } from 'element-plus'
 const socket = ref(null)
-const list = ref(["hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello"])
-
+const list = ref(["hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello"])
 const message = ref(null)
 
 const sendMessage = () => {
@@ -18,29 +28,15 @@ const sendMessage = () => {
   socket.value.send(msg)
   message.value.value = ''
 }
-const uuid = () => {
-  var s = [];
-  var hexDigits = "0123456789abcdef";
-  for (var i = 0; i < 36; i++) {
-    s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
-  }
-  s[14] = "4"; // bits 12-15 of the time_hi_and_version field to 0010
-  s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); // bits 6-7 of the clock_seq_hi_and_reserved to 01
-  s[8] = s[13] = s[18] = s[23] = "-";
-
-  var uuid = s.join("");
-  return uuid;
-}
 onUpdated(() => {
   msglist.value.scrollTop = msglist.value.scrollHeight
 })
 onMounted(() => {
-  let uuid_str = '';
+  console.log()
   let text = '';
-  let chat = document.getElementById("chat");
   let uid = window.localStorage.getItem("uid");
   if (uid == null || uid == '' || uid == 'null') {
-    uid = uuid();
+    uid = generateUUid();
   }
   // 设置本地存储
   window.localStorage.setItem("uid", uid);
@@ -57,7 +53,7 @@ onMounted(() => {
     //连接打开事件
     socket.value.onopen = function () {
       ElMessage({
-        message: 'socket 已打开',
+        message: '连接成功',
         type: 'success',
       })
     };
@@ -103,20 +99,13 @@ onMounted(() => {
     };
   }
   // 回车事件
-  // messageElement.onkeydown = function () {
-  //   if (window.event.keyCode === 13) {
-  //     if (!messageElement.value) {
-  //       return;
-  //     }
-  //     uuid_str = uuid();
-  //     socket.send(messageElement.value);
-  //     //新增问题框
-  //     chat.innerHTML += '<tr><td style="height: 50px;">' + messageElement.value + '</td></tr>';
-  //     messageElement.value = null
-  //     //新增答案框
-  //     chat.innerHTML += '<tr><td><article id="' + uuid_str + '" class="markdown-body"></article></td></tr>';
-  //   }
-  // };
+  console.log(message.value)
+  message.value.onkeydown = () => {
+    if (window.event.keyCode === 13) {
+      console.log("success")
+      sendMessage()
+    }
+  };
 })
 </script>
 <template>
@@ -128,8 +117,7 @@ onMounted(() => {
           <li v-for="m in list" :key="m">
             <div class="messageitem">
               <img src="../assets/imgs/1234.jpg" class="avter">
-              <div class="message">
-                <article v-html='m'></article>
+              <div class="message" v-html="m">
               </div>
             </div>
           </li>
@@ -149,6 +137,14 @@ onMounted(() => {
 <style scoped>
 .continer {
   max-height: 100%;
+}
+
+.hhhh {
+  margin-top: 5px;
+  background: black;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 15px;
 }
 
 .wrapper {
