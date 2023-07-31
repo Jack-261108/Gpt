@@ -1,0 +1,5 @@
+const messageType={
+user: 1,
+gpt: 0
+}
+export default messageType

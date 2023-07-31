@@ -1,41 +1,33 @@
 <script setup>
-import { generateUUid } from '../utils/util'
-import MarkdownIt from 'markdown-it';
-import hljs from 'highlight.js';
-import 'highlight.js/styles/default.css';
-import { onMounted, onUpdated, ref } from 'vue';
-import { ElMessage } from 'element-plus'
-const md = new MarkdownIt({
-  highlight: function (str, lang) {
-    const template = '<pre class="hhhh" style="background: black;color: #fff;border-radius: 10px;padding: 15px 15px;margin: 10px 0"><code>{text}</code></pre>'
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return template.replace("{text}", hljs.highlight(lang, str, true).value)
-      } catch (__) { }
-    }
-    return template.replace("{text}", md.utils.escapeHtml(str))
-  },
-});
+import {generateUUid} from '../utils/util'
+import md from '../utils/markdown'
+import {onMounted, onUpdated, ref} from 'vue';
+import {ElMessage} from 'element-plus'
+
 const isFirst = ref(true)
 const msglist = ref(null)
 const socket = ref(null)
-const list = ref(["hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？hello,我有什么可以帮助你的？", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello", "hello"])
+const list = ref([])
 const message = ref(null)
-
+const isActive = ref(false)
+const inputvalue=ref("")
 const sendMessage = () => {
-  const msg = message.value.value
-  list.value.push(msg)
-  socket.value.send(msg)
-  message.value.value = ''
+  list.value.push({
+    message: inputvalue.value,
+    type: 1
+  })
+  socket.value.send(inputvalue.value)
+  inputvalue.value=''
 }
 onUpdated(() => {
+  console.log("aaaa")
   msglist.value.scrollTop = msglist.value.scrollHeight
 })
 onMounted(() => {
   console.log()
   let text = '';
   let uid = window.localStorage.getItem("uid");
-  if (uid == null || uid == '' || uid == 'null') {
+  if (uid == null || uid === '' || uid === 'null') {
     uid = generateUUid();
   }
   // 设置本地存储
@@ -52,6 +44,7 @@ onMounted(() => {
     socket.value = new WebSocket("ws://localhost:8000/websocket/" + uid);
     //连接打开事件
     socket.value.onopen = function () {
+      isActive.value = true
       ElMessage({
         message: '连接成功',
         type: 'success',
@@ -59,31 +52,32 @@ onMounted(() => {
     };
     //收到消息事件
     socket.value.onmessage = function (msg) {
-      if (msg.data == "[DONE]") {
+      if (msg.data === "[DONE]") {
         isFirst.value = true
         text = '';
         return;
       }
       let json_data = JSON.parse(msg.data)
-      if (json_data.content == null || json_data.content == 'null') {
+      if (json_data.content == null || json_data.content === 'null') {
         text = '';
         return;
       }
       text = text + json_data.content;
-      if (isFirst.value == true) {
-        list.value.push((md.render(text)))
+      if (isFirst.value === true) {
+        list.value.push({message: md.render(text), type: 0})
         isFirst.value = false
       } else {
         list.value.pop()
-        list.value.push((md.render(text)))
+        list.value.push({message: md.render(text), type: 0})
       }
 
     };
     //连接关闭事件
     socket.value.onclose = function () {
+      isActive.value = false
       ElMessage({
         message: 'socket 连接已关闭',
-        type: 'error',
+        type: 'warn',
       })
     };
     //发生了错误事件
@@ -95,6 +89,7 @@ onMounted(() => {
     }
     //窗口关闭时，关闭连接
     window.unload = function () {
+      isActive.value = false
       socket.close();
     };
   }
@@ -111,60 +106,59 @@ onMounted(() => {
 <template>
   <div class="container">
     <div class="wrapper">
-      <div class="header">gpt3.5</div>
+      <div class="header">gpt3.5 <span :class="{ active: isActive, inactive: !isActive }"></span></div>
       <div class="chatlist" ref="msglist">
         <ul>
           <li v-for="m in list" :key="m">
             <div class="messageitem">
-              <img src="../assets/imgs/1234.jpg" class="avter">
-              <div class="message" v-html="m">
+              <img v-if="m.type===1" src="../assets/imgs/1234.jpg" class="avter">
+              <img v-else src="../assets/imgs/img.png" class="avter">
+              <div class="message" v-html="m.message">
               </div>
             </div>
           </li>
         </ul>
       </div>
-      <div id="send">
-        <input placeholder="input your message" ref="message">
-        <button @click="sendMessage">send</button>
-      </div>
-      <div id="copyright">
-        Free Research Preview. ChatGPT may produce inaccurate information about people, places, or facts.
-        ChatGPT July 20 Version
+      <div class="footer">
+        <div id="send">
+          <input placeholder="input your message" ref="message" v-model="inputvalue">
+          <button @click="sendMessage">send</button>
+        </div>
+        <div id="copyright">
+          Free Research Preview. ChatGPT may produce inaccurate information about people, places, or facts.
+          ChatGPT July 20 Version
+        </div>
       </div>
     </div>
   </div>
 </template>
 <style scoped>
-.continer {
-  max-height: 100%;
-}
 
-.hhhh {
-  margin-top: 5px;
-  background: black;
-  color: #fff;
-  border-radius: 10px;
-  padding: 10px 15px;
+.footer {
+  height: 80px;
 }
 
 .wrapper {
+  flex-direction: column;
+  display: flex;
+  height: 100vh;
   width: 1000px;
   margin: 0 auto;
   background-color: rgb(52, 53, 65);
 }
 
 .chatlist {
-  overflow-y: hidden;
   padding: 0 10px;
   /* background-color: pink; */
-  height: 500px;
+  /* height: 500px; */
+  flex: 1;
   overflow: auto;
   background-color: rgb(52, 53, 65);
 }
 
 .chatlist::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
+  width: 0;
+  height: 0;
   background-color: transparent;
 }
 
@@ -173,9 +167,28 @@ onMounted(() => {
   padding-bottom: 5px;
   width: 60%;
   align-items: center;
-  margin: 0 auto;
   display: flex;
-  margin-top: 10px;
+  margin: 10px auto 0;
+}
+
+.active {
+  line-height: 60px;
+  margin-top: 5px;
+  border-radius: 10px;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: #08ec45;
+}
+
+.inactive {
+  line-height: 60px;
+  margin-top: 5px;
+  border-radius: 10px;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background-color: #686d76;
 }
 
 #send input {
@@ -195,8 +208,7 @@ onMounted(() => {
 }
 
 .chatlist ul li {
-  margin-left: 10px;
-  margin: 10px 0px;
+  margin: 10px 0;
   width: 100%;
   height: fit-content;
   /* background-color: brown; */
@@ -230,6 +242,7 @@ onMounted(() => {
 }
 
 .header {
+  vertical-align: middle;
   font-size: 20px;
   line-height: 60px;
   text-align: center;
