@@ -1,6 +1,6 @@
 # Gpt
 
-This template should help get you started developing with Vue 3 in Vite.
+This template should help get you started developing with Vue 3 in Vite，该项目的后端实现请参考[chat-gpt-stream-output](https://github.com/Jack-261108/chatgpt-steam-output),该项目的图面是仿官网的页面.仅仅只实现对话和上下文功能，欢迎有能力的大佬对该项目进行二次重构。
 
 ## Recommended IDE Setup
 
@@ -27,3 +27,4 @@ npm run dev
 ```sh
 npm run build
 ```
+
